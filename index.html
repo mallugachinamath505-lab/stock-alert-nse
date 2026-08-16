@@ -14,35 +14,32 @@
                 <h1 class="text-3xl md:text-4xl font-extrabold text-blue-400">🇮🇳 NSE Alert Pro</h1>
                 <p class="text-slate-400 text-sm mt-1">Live Market Trigger System</p>
             </div>
+            <button onclick="resetProfile()" class="text-xs text-slate-500 hover:text-slate-300 underline">Reset Profile</button>
         </header>
 
-        <!-- SETUP PROFILE SECTION (Hidden permanently after first use) -->
+        <!-- SETUP PROFILE SECTION -->
         <div id="profileSection" class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl max-w-md mx-auto mb-8">
-            <h2 class="text-xl font-bold mb-2 text-slate-200">Who is setting up this device?</h2>
-            <p class="text-xs text-slate-400 mb-6">Select your profile to permanently link your Telegram account.</p>
+            <h2 class="text-xl font-bold mb-2 text-slate-200">Device Setup</h2>
+            <p class="text-xs text-slate-400 mb-6">Enter your details once to link your Telegram account.</p>
             
             <form id="profileForm" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Select Profile</label>
-                    <select id="user_profile" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 font-semibold text-white focus:outline-none focus:border-blue-500">
-                        <option value="" disabled selected>Select your name...</option>
-                        
-                        <!-- ADMIN PROFILE -->
-                        <option value="1919939907" data-name="Mallikarjun">Mallikarjun (Admin)</option>
-                        
-                        <!-- ADD YOUR FRIENDS HERE -->
-                        <option value="7106594646" data-name="Friend 1 Name">HARIPRAKASH Name</option>
-                        <option value="PASTE_FRIENDS_CHAT_ID_HERE" data-name="Friend 2 Name">Friend 2 Name</option>
-
-                    </select>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Your Name</label>
+                    <input type="text" id="user_name" required placeholder="e.g. Rahul" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 font-semibold text-white focus:outline-none focus:border-blue-500">
                 </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Telegram Chat ID</label>
+                    <input type="text" id="user_chat_id" required placeholder="e.g. 1919939907" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 font-semibold text-white focus:outline-none focus:border-blue-500">
+                    <p class="text-[10px] text-emerald-500 mt-1">Send a message to @userinfobot on Telegram to get your 9-digit ID.</p>
+                </div>
+
                 <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-lg transition shadow-lg text-white mt-4">
                     Save Profile & Continue
                 </button>
             </form>
         </div>
 
-        <!-- MAIN DASHBOARD (Hidden until setup is complete) -->
+        <!-- MAIN DASHBOARD -->
         <div id="dashboardSection" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
             
             <!-- Quick Alert Form -->
@@ -91,48 +88,46 @@
     </div>
 
     <script>
-        // DOM Elements
         const profileSec = document.getElementById('profileSection');
         const dashboardSec = document.getElementById('dashboardSection');
         
-        // 1. Check if user already set up their profile permanently
         document.addEventListener("DOMContentLoaded", () => {
             if (localStorage.getItem("stock_chat_id")) {
                 showDashboard();
             }
         });
 
-        // 2. Handle First-Time Profile Setup (Dropdown Version)
         document.getElementById('profileForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            const selectEl = document.getElementById('user_profile');
-            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            const nameInput = document.getElementById('user_name').value.trim();
+            const chatIdInput = document.getElementById('user_chat_id').value.trim();
             
-            localStorage.setItem("stock_name", selectedOption.getAttribute('data-name'));
-            localStorage.setItem("stock_phone", "N/A"); // Auto-fill required phone field
-            localStorage.setItem("stock_chat_id", selectedOption.value);
+            localStorage.setItem("stock_name", nameInput);
+            localStorage.setItem("stock_phone", "N/A"); 
+            localStorage.setItem("stock_chat_id", chatIdInput);
             showDashboard();
         });
 
-        // Function to switch to the main app view
         function showDashboard() {
             profileSec.classList.add('hidden');
             dashboardSec.classList.remove('hidden');
             loadAlerts(); 
         }
 
-        // 3. Load only alerts that belong to this specific user's Chat ID
+        function resetProfile() {
+            localStorage.clear();
+            location.reload();
+        }
+
         async function loadAlerts() {
             try {
                 const res = await fetch('/api/alerts/active');
                 let alerts = await res.json();
                 
-                // Filter so friends don't see each other's alerts
                 const myChatId = localStorage.getItem("stock_chat_id");
                 alerts = alerts.filter(a => a.chat_id === myChatId);
 
                 const list = document.getElementById('alertsList');
-                
                 if (alerts.length === 0) {
                     list.innerHTML = '<p class="text-slate-500 text-sm italic">No reminders set yet.</p>';
                     return;
@@ -154,7 +149,6 @@
             }
         }
 
-        // 4. Handle adding a new stock reminder
         document.getElementById('alertForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
@@ -164,7 +158,6 @@
             btn.textContent = 'Adding...';
             msg.textContent = '';
 
-            // Grab hidden user details from the browser memory
             const payload = {
                 name: localStorage.getItem("stock_name"),
                 phone: localStorage.getItem("stock_phone"),
@@ -185,11 +178,8 @@
                 if (response.ok) {
                     msg.className = 'mt-4 text-sm font-bold text-emerald-400';
                     msg.textContent = `✅ Reminder set! (Current: ₹${result.current_price})`;
-                    
-                    // Clear the stock inputs for the next entry
                     document.getElementById('ticker').value = '';
                     document.getElementById('target_price').value = '';
-                    
                     loadAlerts();
                 } else {
                     msg.className = 'mt-4 text-sm font-bold text-rose-400';
@@ -205,7 +195,6 @@
             }
         });
 
-        // Automatically check for new alerts every 15 seconds
         setInterval(loadAlerts, 15000);
     </script>
 </body>

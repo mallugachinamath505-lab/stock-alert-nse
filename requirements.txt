@@ -1,6 +1,7 @@
 fastapi
 uvicorn
+pydantic
+razorpay
+requests
 yfinance
 pymongo
-certifi
-pydantic

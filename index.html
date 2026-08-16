@@ -17,38 +17,32 @@
             <button onclick="resetProfile()" class="text-xs text-slate-500 hover:text-slate-300 underline">Reset Profile</button>
         </header>
 
-        <!-- SETUP PROFILE SECTION (LOCKED) -->
+        <!-- SETUP PROFILE SECTION -->
         <div id="profileSection" class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl max-w-md mx-auto mb-8">
-            <h2 class="text-xl font-bold mb-2 text-slate-200">Device Setup & Activation</h2>
-            <p class="text-xs text-slate-400 mb-6">Complete the 3 steps below to activate your live Telegram alerts.</p>
+            <h2 class="text-xl font-bold mb-2 text-slate-200">Activation & Setup</h2>
+            <p class="text-xs text-slate-400 mb-6">Complete the steps below to activate your account.</p>
             
-            <form id="profileForm" class="space-y-6">
-                
-                <!-- STEP 1 & 2: TELEGRAM SETUP -->
+            <!-- UTR SUBMISSION FORM -->
+            <form id="submitUtrForm" class="space-y-4">
                 <div class="bg-slate-900/60 p-4 rounded-lg border border-slate-700 space-y-3">
-                    <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Part 1: Link Telegram</span>
-                    
+                    <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">1. Connect Telegram</span>
                     <a href="https://t.me/userinfobot" target="_blank" class="block text-[12px] font-bold text-emerald-400 hover:text-emerald-300 underline transition">
                         1️⃣ First, join this link and copy your ID code
                     </a>
-                    
                     <a href="https://t.me/Stockalert66bot" target="_blank" class="block text-[12px] font-bold text-blue-400 hover:text-blue-300 underline transition">
                         2️⃣ Next, join the bot to allow stock reminders
                     </a>
-
-                    <div class="mt-3 pt-3 border-t border-slate-700">
+                    <div class="mt-3">
                         <label class="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Paste Telegram Code Here ☝️</label>
                         <input type="text" id="user_chat_id" required placeholder="Paste code here..." class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 font-semibold text-white focus:outline-none focus:border-blue-500 text-sm">
                     </div>
                 </div>
 
-                <!-- STEP 3: PAYMENT & PASSCODE LOCK -->
                 <div class="bg-slate-900/60 p-4 rounded-lg border border-slate-700">
-                    <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Part 2: Activation Fee (₹10)</span>
-                    <p class="text-[11px] text-slate-400 mb-3">Scan to pay the one-time ₹10 fee. Message the admin after paying to receive your Access Code.</p>
+                    <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">2. Pay & Request Code</span>
+                    <p class="text-[11px] text-slate-400 mb-3">Scan to pay the one-time ₹10 fee. We will verify your UTR and instantly message your access code to your Telegram.</p>
                     
                     <div class="flex justify-center mb-4 bg-white p-2 rounded-lg w-fit mx-auto">
-                        <!-- Dynamic UPI QR Code targeting your actual ID -->
                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=9591556942@axl&pn=StockAlertPro&am=10&cu=INR" alt="UPI QR Code" class="w-32 h-32">
                     </div>
 
@@ -56,23 +50,37 @@
                         <label class="block text-[11px] font-semibold uppercase text-slate-400 mb-1">Your Name</label>
                         <input type="text" id="user_name" required placeholder="e.g. Rahul" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 font-semibold text-white focus:outline-none focus:border-blue-500 text-sm">
                     </div>
-
-                    <!-- STRICT PASSCODE FIELD -->
                     <div>
-                        <label class="block text-[11px] font-semibold uppercase text-emerald-400 mb-1">🔒 Admin Access Code</label>
-                        <input type="password" id="access_code" required placeholder="Enter Secret PIN to unlock..." class="w-full bg-slate-800 border border-emerald-600/50 rounded-lg p-2 font-semibold text-white focus:outline-none focus:border-emerald-500 text-sm">
+                        <label class="block text-[11px] font-semibold uppercase text-slate-400 mb-1">12-Digit UTR / Reference No.</label>
+                        <input type="text" id="utr_number" required minlength="12" maxlength="12" placeholder="e.g. 312345678901" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 font-semibold text-white focus:outline-none focus:border-blue-500 text-sm">
                     </div>
+                </div>
+                
+                <button type="submit" id="requestBtn" class="w-full bg-blue-600 hover:bg-blue-500 font-bold py-3 rounded-lg transition shadow-lg text-white mt-4">
+                    Submit UTR & Request Code
+                </button>
+            </form>
+
+            <div class="my-6 border-t border-slate-700 relative">
+                <span class="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-800 px-2 text-xs text-slate-500">OR</span>
+            </div>
+
+            <!-- UNLOCK FORM -->
+            <form id="unlockForm" class="space-y-4">
+                <div class="bg-slate-900/60 p-4 rounded-lg border border-slate-700">
+                    <span class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">3. Unlock Dashboard</span>
+                    <label class="block text-[11px] font-semibold uppercase text-emerald-400 mb-1">Enter Code Received on Telegram</label>
+                    <input type="text" id="access_code" required placeholder="e.g. A7X9Q2" class="w-full bg-slate-800 border border-emerald-600/50 rounded-lg p-2 font-semibold uppercase text-white focus:outline-none focus:border-emerald-500 text-sm tracking-widest text-center">
                 </div>
 
                 <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-lg transition shadow-lg text-white mt-4">
-                    Unlock Dashboard
+                    Verify Code & Enter
                 </button>
             </form>
         </div>
 
         <!-- MAIN DASHBOARD -->
         <div id="dashboardSection" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
-            
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl h-fit">
                 <h2 class="text-xl font-bold mb-4 text-slate-200">⚡ Set Quick Alert</h2>
                 
@@ -81,7 +89,6 @@
                         <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">NSE Ticker</label>
                         <input type="text" id="ticker" required placeholder="e.g. TCS, RELIANCE" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-lg font-bold uppercase text-white focus:outline-none focus:border-blue-500">
                     </div>
-
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Target (₹)</label>
@@ -95,22 +102,11 @@
                             </select>
                         </div>
                     </div>
-
                     <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-500 font-bold py-4 rounded-lg transition shadow-lg text-white mt-2 text-lg">
                         Add Reminder
                     </button>
                 </form>
                 <div id="message" class="mt-4 text-sm font-semibold text-center"></div>
-
-                <div class="mt-5 pt-5 border-t border-slate-700 text-left space-y-2">
-                    <span class="block text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Not receiving alerts?</span>
-                    <a href="https://t.me/userinfobot" target="_blank" class="block text-xs text-emerald-400 hover:text-emerald-300 transition underline">
-                        1️⃣ Make sure you copied your code from @userinfobot
-                    </a>
-                    <a href="https://t.me/Stockalert66bot" target="_blank" class="block text-xs text-blue-400 hover:text-blue-300 transition underline">
-                        2️⃣ Ensure you joined @Stockalert66bot
-                    </a>
-                </div>
             </div>
 
             <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
@@ -118,7 +114,6 @@
                     <h2 class="text-xl font-bold text-slate-200">My Reminders</h2>
                     <span class="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-700 px-2 py-1 rounded-full">● Live</span>
                 </div>
-                
                 <div id="alertsList" class="space-y-3 max-h-[480px] overflow-y-auto">
                     <p class="text-slate-500 text-sm">Loading active alerts...</p>
                 </div>
@@ -131,31 +126,65 @@
         const dashboardSec = document.getElementById('dashboardSection');
         
         document.addEventListener("DOMContentLoaded", () => {
-            if (localStorage.getItem("stock_chat_id")) {
+            if (localStorage.getItem("stock_chat_id") && localStorage.getItem("stock_access_granted")) {
                 showDashboard();
             }
         });
 
-        document.getElementById('profileForm').addEventListener('submit', (e) => {
+        // 1. Submit UTR to Backend
+        document.getElementById('submitUtrForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const nameInput = document.getElementById('user_name').value.trim();
-            const chatIdInput = document.getElementById('user_chat_id').value.trim();
-            const accessCode = document.getElementById('access_code').value.trim();
-            
-            // STRICT PASSCODE CHECK
-            const SECRET_PASSCODE = "NSE2026"; 
-            
-            if(accessCode !== SECRET_PASSCODE) {
-                alert("❌ Invalid Access Code! Please complete the ₹10 payment and ask the admin for the code.");
-                return; 
+            const btn = document.getElementById('requestBtn');
+            btn.innerText = "Sending Request...";
+            btn.disabled = true;
+
+            const name = document.getElementById('user_name').value.trim();
+            const chatId = document.getElementById('user_chat_id').value.trim();
+            const utr = document.getElementById('utr_number').value.trim();
+
+            try {
+                await fetch('/api/request-access', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ name: name, chat_id: chatId, utr: utr })
+                });
+                alert("✅ UTR Submitted Successfully!\n\nPlease wait for the admin to verify your payment. Your unique code will be sent to your Telegram bot.");
+            } catch (err) {
+                alert("Failed to submit request.");
+            } finally {
+                btn.innerText = "Submit UTR & Request Code";
+                btn.disabled = false;
             }
-            
-            localStorage.setItem("stock_name", nameInput);
-            localStorage.setItem("stock_phone", "Verified");
-            localStorage.setItem("stock_chat_id", chatIdInput);
-            
-            alert("✅ Passcode accepted! Dashboard unlocked.");
-            showDashboard();
+        });
+
+        // 2. Verify Code to Unlock
+        document.getElementById('unlockForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const chatId = document.getElementById('user_chat_id').value.trim();
+            const code = document.getElementById('access_code').value.trim().toUpperCase();
+
+            if(!chatId) { alert("Please enter your Telegram Chat ID in Step 1 first."); return; }
+
+            try {
+                const res = await fetch('/api/verify-code', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ chat_id: chatId, code: code })
+                });
+                const data = await res.json();
+                
+                if (res.ok && data.status === "success") {
+                    localStorage.setItem("stock_name", data.name);
+                    localStorage.setItem("stock_chat_id", chatId);
+                    localStorage.setItem("stock_access_granted", "true");
+                    alert("✅ Code Accepted! Dashboard Unlocked.");
+                    showDashboard();
+                } else {
+                    alert("❌ " + (data.detail || "Invalid Code"));
+                }
+            } catch (err) {
+                alert("Failed to connect to server.");
+            }
         });
 
         function showDashboard() {
@@ -173,50 +202,38 @@
             try {
                 const res = await fetch('/api/alerts/active');
                 let alerts = await res.json();
-                
                 const myChatId = localStorage.getItem("stock_chat_id");
                 alerts = alerts.filter(a => a.chat_id === myChatId);
-
                 const list = document.getElementById('alertsList');
                 if (alerts.length === 0) {
                     list.innerHTML = '<p class="text-slate-500 text-sm italic">No reminders set yet.</p>';
                     return;
                 }
-
                 list.innerHTML = alerts.map(a => `
                     <div class="p-4 bg-slate-900/80 border border-slate-700 rounded-lg flex justify-between items-center">
-                        <div>
-                            <div class="font-black text-blue-400 text-xl">${a.ticker}</div>
-                        </div>
+                        <div><div class="font-black text-blue-400 text-xl">${a.ticker}</div></div>
                         <div class="text-right">
                             <div class="text-sm text-slate-400">Alert me when</div>
                             <div class="font-bold text-white text-lg">${a.condition} ₹${a.target}</div>
                         </div>
                     </div>
                 `).join('');
-            } catch (err) {
-                console.error("Failed to load alerts", err);
-            }
+            } catch (err) { console.error(err); }
         }
 
         document.getElementById('alertForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('submitBtn');
             const msg = document.getElementById('message');
+            btn.disabled = true; btn.textContent = 'Adding...'; msg.textContent = '';
             
-            btn.disabled = true;
-            btn.textContent = 'Adding...';
-            msg.textContent = '';
-
             const payload = {
                 name: localStorage.getItem("stock_name"),
-                phone: localStorage.getItem("stock_phone"),
                 chat_id: localStorage.getItem("stock_chat_id"),
                 ticker: document.getElementById('ticker').value,
                 target_price: parseFloat(document.getElementById('target_price').value),
                 condition: document.getElementById('condition').value
             };
-
             try {
                 const response = await fetch('/api/alerts', {
                     method: 'POST',
@@ -224,7 +241,6 @@
                     body: JSON.stringify(payload)
                 });
                 const result = await response.json();
-
                 if (response.ok) {
                     msg.className = 'mt-4 text-sm font-bold text-emerald-400';
                     msg.textContent = `✅ Reminder set! (Current: ₹${result.current_price})`;
@@ -237,14 +253,12 @@
                 }
             } catch (err) {
                 msg.className = 'mt-4 text-sm font-bold text-rose-400';
-                msg.textContent = 'Failed to connect to backend.';
+                msg.textContent = 'Failed to connect.';
             } finally {
-                btn.disabled = false;
-                btn.textContent = 'Add Reminder';
+                btn.disabled = false; btn.textContent = 'Add Reminder';
                 setTimeout(() => msg.textContent = '', 4000);
             }
         });
-
         setInterval(loadAlerts, 15000);
     </script>
 </body>

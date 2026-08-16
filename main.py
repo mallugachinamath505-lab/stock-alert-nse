@@ -3,6 +3,7 @@ import asyncio
 import logging
 import random
 import string
+import sqlite3
 from typing import List, Optional
 from contextlib import asynccontextmanager
 
@@ -11,7 +12,6 @@ from fastapi.responses import FileResponse, HTMLResponse
 from pydantic import BaseModel
 import requests
 import yfinance as yf
-from pymongo import MongoClient
 
 # Configure Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -21,19 +21,25 @@ logger = logging.getLogger(__name__)
 # 1. CONFIGURATION & SECRETS
 # ----------------------------------------------------
 TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "YOUR_TELEGRAM_BOT_TOKEN")
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
-DB_NAME = "stock_alert_db"
+DB_FILE = "alerts.db"
 
-try:
-    mongo_client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
-    db = mongo_client[DB_NAME]
-    alerts_collection = db["alerts"]
-    users_collection = db["users"] # NEW: Table for tracking UTRs and Codes
-    logger.info("Connected to MongoDB successfully.")
-except Exception as e:
-    logger.error(f"MongoDB connection failed: {e}")
-    alerts_collection = None
-    users_collection = None
+# Initialize SQLite Database
+def init_db():
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS alerts
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  name TEXT, phone TEXT, chat_id TEXT,
+                  ticker TEXT, target_price REAL, condition TEXT,
+                  triggered BOOLEAN, created_at_price REAL, triggered_at_price REAL)''')
+    c.execute('''CREATE TABLE IF NOT EXISTS users
+                 (chat_id TEXT PRIMARY KEY,
+                  name TEXT, utr TEXT, status TEXT, code TEXT)''')
+    conn.commit()
+    conn.close()
+    logger.info("SQLite Database Initialized.")
+
+init_db()
 
 # ----------------------------------------------------
 # 2. PYDANTIC DATA MODELS
@@ -98,43 +104,40 @@ def send_telegram_alert(chat_id: str, message: str) -> bool:
 async def background_stock_monitor():
     while True:
         try:
-            if alerts_collection is not None:
-                active_alerts = list(alerts_collection.find({"triggered": False}))
-                for alert in active_alerts:
-                    ticker = alert.get("ticker")
-                    target = float(alert.get("target_price", 0))
-                    condition = alert.get("condition")
-                    chat_id = alert.get("chat_id")
-                    user_name = alert.get("name", "Trader")
+            conn = sqlite3.connect(DB_FILE)
+            c = conn.cursor()
+            c.execute("SELECT id, ticker, target_price, condition, chat_id, name FROM alerts WHERE triggered=0")
+            active_alerts = c.fetchall()
+            
+            for row in active_alerts:
+                alert_id, ticker, target, condition, chat_id, user_name = row
+                current_price = fetch_live_price(ticker)
+                if current_price is None:
+                    await asyncio.sleep(2)
+                    continue
 
-                    current_price = fetch_live_price(ticker)
-                    if current_price is None:
-                        await asyncio.sleep(2)
-                        continue
+                is_triggered = False
+                if condition == "ABOVE" and current_price >= target:
+                    is_triggered = True
+                elif condition == "BELOW" and current_price <= target:
+                    is_triggered = True
 
-                    is_triggered = False
-                    if condition == "ABOVE" and current_price >= target:
-                        is_triggered = True
-                    elif condition == "BELOW" and current_price <= target:
-                        is_triggered = True
-
-                    if is_triggered:
-                        msg = (
-                            f"🚨 <b>NSE Stock Alert Triggered!</b>\n\n"
-                            f"👤 <b>User:</b> {user_name}\n"
-                            f"📈 <b>Stock:</b> <code>{ticker}</code>\n"
-                            f"🎯 <b>Target:</b> ₹{target} ({condition})\n"
-                            f"💰 <b>Current Price:</b> ₹{current_price}\n\n"
-                            f"⚡ <i>Automated notification by NSE Alert Pro</i>"
-                        )
-                        send_telegram_alert(chat_id, msg)
-                        alerts_collection.update_one(
-                            {"_id": alert["_id"]},
-                            {"$set": {"triggered": True, "triggered_at_price": current_price}}
-                        )
-                    await asyncio.sleep(2) 
-        except Exception:
-            pass
+                if is_triggered:
+                    msg = (
+                        f"🚨 <b>NSE Stock Alert Triggered!</b>\n\n"
+                        f"👤 <b>User:</b> {user_name}\n"
+                        f"📈 <b>Stock:</b> <code>{ticker}</code>\n"
+                        f"🎯 <b>Target:</b> ₹{target} ({condition})\n"
+                        f"💰 <b>Current Price:</b> ₹{current_price}\n\n"
+                        f"⚡ <i>Automated notification by NSE Alert Pro</i>"
+                    )
+                    send_telegram_alert(chat_id, msg)
+                    c.execute("UPDATE alerts SET triggered=1, triggered_at_price=? WHERE id=?", (current_price, alert_id))
+                    conn.commit()
+                await asyncio.sleep(2) 
+            conn.close()
+        except Exception as e:
+            logger.error(f"Background monitor error: {e}")
         await asyncio.sleep(60) 
 
 @asynccontextmanager
@@ -146,52 +149,56 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="NSE Stock Alert API", lifespan=lifespan)
 
 # ----------------------------------------------------
-# 5. NEW ADMIN & ACTIVATION ROUTES
+# 5. ADMIN & ACTIVATION ROUTES (SQLite)
 # ----------------------------------------------------
-
-# User Submits UTR
 @app.post("/api/request-access")
 async def request_access(req: AccessRequest):
-    if users_collection is not None:
-        users_collection.update_one(
-            {"chat_id": req.chat_id},
-            {"$set": {"name": req.name, "utr": req.utr, "status": "pending", "code": None}},
-            upsert=True
-        )
-    return {"status": "success"}
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('''INSERT INTO users (chat_id, name, utr, status, code)
+                     VALUES (?, ?, ?, 'pending', NULL)
+                     ON CONFLICT(chat_id) DO UPDATE SET
+                     name=excluded.name, utr=excluded.utr, status='pending', code=NULL''',
+                  (req.chat_id, req.name, req.utr))
+        conn.commit()
+        conn.close()
+        return {"status": "success"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-# User Enters Secret Code
 @app.post("/api/verify-code")
 async def verify_code(req: VerifyCodeRequest):
-    if users_collection is not None:
-        user = users_collection.find_one({"chat_id": req.chat_id, "code": req.code, "status": "approved"})
-        if user:
-            return {"status": "success", "name": user.get("name")}
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT name FROM users WHERE chat_id=? AND code=? AND status='approved'", (req.chat_id, req.code))
+    row = c.fetchone()
+    conn.close()
+    if row:
+        return {"status": "success", "name": row[0]}
     raise HTTPException(status_code=400, detail="Invalid code or pending approval.")
 
-# Admin Dashboard API: Get Pending UTRs
 @app.get("/api/admin/pending")
 async def get_pending():
-    if users_collection is None: return []
-    return list(users_collection.find({"status": "pending"}, {"_id": 0}))
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT chat_id, name, utr FROM users WHERE status='pending'")
+    rows = c.fetchall()
+    conn.close()
+    return [{"chat_id": r[0], "name": r[1], "utr": r[2]} for r in rows]
 
-# Admin Dashboard API: Approve UTR & Generate Code
 @app.post("/api/admin/approve")
 async def approve_request(req: ApproveRequest):
-    if users_collection is not None:
-        # Generate random 6 character code
-        unique_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
-        
-        users_collection.update_one(
-            {"chat_id": req.chat_id},
-            {"$set": {"status": "approved", "code": unique_code}}
-        )
-        # Send it directly to their Telegram bot!
-        msg = f"✅ <b>Payment Verified!</b>\n\nYour unique Access Code is:\n<code>{unique_code}</code>\n\nPaste this on the website to unlock your dashboard."
-        send_telegram_alert(req.chat_id, msg)
-        
-        return {"status": "success", "code": unique_code}
-    return {"status": "error"}
+    unique_code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=6))
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("UPDATE users SET status='approved', code=? WHERE chat_id=?", (unique_code, req.chat_id))
+    conn.commit()
+    conn.close()
+    
+    msg = f"✅ <b>Payment Verified!</b>\n\nYour unique Access Code is:\n<code>{unique_code}</code>\n\nPaste this on the website to unlock your dashboard."
+    send_telegram_alert(req.chat_id, msg)
+    return {"status": "success", "code": unique_code}
 
 # ----------------------------------------------------
 # 6. EXISTING ROUTES
@@ -200,7 +207,6 @@ async def approve_request(req: ApproveRequest):
 async def serve_index():
     return FileResponse("index.html")
 
-# HIDDEN ADMIN PAGE
 @app.get("/admin", response_class=HTMLResponse)
 async def admin_page():
     return """
@@ -214,20 +220,24 @@ async def admin_page():
         </div>
         <script>
             async function loadPending() {
-                const res = await fetch('/api/admin/pending');
-                const data = await res.json();
-                const list = document.getElementById('list');
-                if(data.length === 0) { list.innerHTML = '<p class="text-slate-400">No pending payments.</p>'; return; }
-                list.innerHTML = data.map(u => `
-                    <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
-                        <p class="text-sm text-slate-400">Name: <span class="font-bold text-white">${u.name}</span></p>
-                        <p class="text-sm text-slate-400">Chat ID: <span class="font-bold text-white">${u.chat_id}</span></p>
-                        <p class="text-lg text-emerald-400 mt-2 font-mono">UTR: ${u.utr}</p>
-                        <button onclick="approve('${u.chat_id}')" class="mt-4 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 px-4 rounded transition shadow-lg">
-                            ✅ Verify UTR & Send Code
-                        </button>
-                    </div>
-                `).join('');
+                try {
+                    const res = await fetch('/api/admin/pending');
+                    const data = await res.json();
+                    const list = document.getElementById('list');
+                    if(data.length === 0) { list.innerHTML = '<p class="text-slate-400">No pending payments.</p>'; return; }
+                    list.innerHTML = data.map(u => `
+                        <div class="bg-slate-800 p-4 rounded-xl border border-slate-700">
+                            <p class="text-sm text-slate-400">Name: <span class="font-bold text-white">${u.name}</span></p>
+                            <p class="text-sm text-slate-400">Chat ID: <span class="font-bold text-white">${u.chat_id}</span></p>
+                            <p class="text-lg text-emerald-400 mt-2 font-mono">UTR: ${u.utr}</p>
+                            <button onclick="approve('${u.chat_id}')" class="mt-4 bg-emerald-600 hover:bg-emerald-500 font-bold py-2 px-4 rounded transition shadow-lg">
+                                ✅ Verify UTR & Send Code
+                            </button>
+                        </div>
+                    `).join('');
+                } catch (err) {
+                    document.getElementById('list').innerHTML = '<p class="text-rose-400">Error loading data.</p>';
+                }
             }
             async function approve(chat_id) {
                 event.target.innerText = "Generating Code...";
@@ -253,17 +263,21 @@ async def create_alert(alert: AlertModel):
     live_price = fetch_live_price(ticker)
     if live_price is None:
         raise HTTPException(status_code=400, detail="Invalid ticker symbol.")
-    alert_doc = {
-        "name": alert.name, "phone": alert.phone, "chat_id": alert.chat_id,
-        "ticker": ticker, "target_price": alert.target_price, "condition": alert.condition,
-        "triggered": False, "created_at_price": live_price
-    }
-    if alerts_collection is not None:
-        alerts_collection.insert_one(alert_doc)
+        
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute('''INSERT INTO alerts (name, phone, chat_id, ticker, target_price, condition, triggered, created_at_price)
+                 VALUES (?, ?, ?, ?, ?, ?, 0, ?)''',
+              (alert.name, alert.phone, alert.chat_id, ticker, alert.target_price, alert.condition, live_price))
+    conn.commit()
+    conn.close()
     return {"status": "success", "current_price": live_price}
 
 @app.get("/api/alerts/active")
 async def get_active_alerts():
-    if alerts_collection is None: return []
-    alerts = list(alerts_collection.find({"triggered": False}, {"_id": 0}))
-    return alerts
+    conn = sqlite3.connect(DB_FILE)
+    c = conn.cursor()
+    c.execute("SELECT ticker, target_price, condition, chat_id, name FROM alerts WHERE triggered=0")
+    rows = c.fetchall()
+    conn.close()
+    return [{"ticker": r[0], "target": r[1], "condition": r[2], "chat_id": r[3], "name": r[4]} for r in rows]

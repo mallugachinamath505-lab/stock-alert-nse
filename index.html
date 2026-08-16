@@ -18,21 +18,23 @@
 
         <!-- SETUP PROFILE SECTION (Hidden permanently after first use) -->
         <div id="profileSection" class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl max-w-md mx-auto mb-8">
-            <h2 class="text-xl font-bold mb-2 text-slate-200">1-Minute Setup</h2>
-            <p class="text-xs text-slate-400 mb-6">Enter your details once to permanently link your Telegram account.</p>
+            <h2 class="text-xl font-bold mb-2 text-slate-200">Who is setting up this device?</h2>
+            <p class="text-xs text-slate-400 mb-6">Select your profile to permanently link your Telegram account.</p>
             
             <form id="profileForm" class="space-y-4">
                 <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Your Name</label>
-                    <input type="text" id="name" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Mobile Number</label>
-                    <input type="tel" id="phone" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-blue-500">
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Telegram Chat ID</label>
-                    <input type="text" id="chat_id" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-blue-500 font-semibold text-blue-300">
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Select Profile</label>
+                    <select id="user_profile" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 font-semibold text-white focus:outline-none focus:border-blue-500">
+                        <option value="" disabled selected>Select your name...</option>
+                        
+                        <!-- ADMIN PROFILE -->
+                        <option value="1919939907" data-name="Mallikarjun">Mallikarjun (Admin)</option>
+                        
+                        <!-- ADD YOUR FRIENDS HERE -->
+                        <option value="7106594646" data-name="Friend 1 Name">HARIPRAKASH Name</option>
+                        <option value="PASTE_FRIENDS_CHAT_ID_HERE" data-name="Friend 2 Name">Friend 2 Name</option>
+
+                    </select>
                 </div>
                 <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-lg transition shadow-lg text-white mt-4">
                     Save Profile & Continue
@@ -100,12 +102,15 @@
             }
         });
 
-        // 2. Handle First-Time Profile Setup
+        // 2. Handle First-Time Profile Setup (Dropdown Version)
         document.getElementById('profileForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            localStorage.setItem("stock_name", document.getElementById('name').value);
-            localStorage.setItem("stock_phone", document.getElementById('phone').value);
-            localStorage.setItem("stock_chat_id", document.getElementById('chat_id').value);
+            const selectEl = document.getElementById('user_profile');
+            const selectedOption = selectEl.options[selectEl.selectedIndex];
+            
+            localStorage.setItem("stock_name", selectedOption.getAttribute('data-name'));
+            localStorage.setItem("stock_phone", "N/A"); // Auto-fill required phone field
+            localStorage.setItem("stock_chat_id", selectedOption.value);
             showDashboard();
         });
 
@@ -113,7 +118,7 @@
         function showDashboard() {
             profileSec.classList.add('hidden');
             dashboardSec.classList.remove('hidden');
-            loadAlerts(); // Load alerts when dashboard opens
+            loadAlerts(); 
         }
 
         // 3. Load only alerts that belong to this specific user's Chat ID
@@ -196,8 +201,6 @@
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'Add Reminder';
-                
-                // Clear success message after 4 seconds
                 setTimeout(() => msg.textContent = '', 4000);
             }
         });

@@ -9,24 +9,25 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from pymongo import MongoClient
 import yfinance as yf
+import requests
 
 # ==========================================
 # CONFIGURATION
 # ==========================================
-# 1. Your Bot Token from @BotFather
 TELEGRAM_BOT_TOKEN = "8899102290:AAHa7KkJLpcJUfn15ux2T5iKa1RNJH880MK"
-
-# 2. Your MongoDB Atlas Connection URI
-# PASTE YOUR URI HERE (replace <username> and <password>)
-MONGO_URI = "mongodb+srv://mallugachinamath505_db_user:F2C54uBNLOBtHMqV@stockalert.wmexi7s.mongodb.net/?appName=stockalert"
-
-# Connect to MongoDB Atlas securely
+MONGO_URI = "mongodb+srv://mallugachinamath505_db_user:aoKBQpO5XRXily4W@stockalert.wmexi7s.mongodb.net/?appName=stockalert"
 client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["stock_alerts_db"]
 alerts_col = db["alerts"]
 
+# Set up a browser disguise to bypass Yahoo Finance rate limits
+yf_session = requests.Session()
+yf_session.headers.update({
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+})
+
 # ==========================================
-# TELEGRAM DISPATCHER (Dynamic per User)
+# TELEGRAM DISPATCHER
 # ==========================================
 def send_telegram_alert(chat_id: str, ticker: str, current_price: float, target_price: float, condition: str):
     message = (
@@ -64,7 +65,8 @@ async def check_prices_loop():
                 alert_id = alert["_id"]
 
                 try:
-                    stock = yf.Ticker(ticker)
+                    # Pass the session disguise here
+                    stock = yf.Ticker(ticker, session=yf_session)
                     current_price = stock.history(period="1d")['Close'].iloc[-1]
 
                     triggered = False
@@ -76,9 +78,11 @@ async def check_prices_loop():
                     if triggered:
                         print(f"🚨 ALERT TRIGGERED: {ticker} @ ₹{current_price:.2f} for Chat ID {chat_id}")
                         send_telegram_alert(chat_id, ticker, current_price, target_price, condition)
-
-                        # Deactivate alert in MongoDB so it only alerts once
                         alerts_col.update_one({"_id": alert_id}, {"$set": {"is_active": False}})
+                    
+                    # Pause for 2 seconds before checking the next stock to prevent bans
+                    await asyncio.sleep(2)
+
                 except Exception as e:
                     print(f"[Error] Failed checking {ticker}: {e}")
 
@@ -117,14 +121,12 @@ def create_alert(alert: AlertRequest):
     if not ticker.endswith('.NS'):
         ticker = f"{ticker}.NS"
 
-    # Validate ticker with yfinance
-    stock = yf.Ticker(ticker)
     try:
+        stock = yf.Ticker(ticker, session=yf_session)
         current_price = stock.history(period="1d")['Close'].iloc[-1]
     except Exception:
-        raise HTTPException(status_code=400, detail="Invalid NSE stock symbol. Please check the ticker.")
+        raise HTTPException(status_code=400, detail="Invalid NSE stock symbol or Yahoo Finance is blocking the request. Try again.")
 
-    # Insert into MongoDB Atlas
     new_alert = {
         "name": alert.name.strip(),
         "phone": alert.phone.strip(),

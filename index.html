@@ -47,7 +47,7 @@
                         <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=upi://pay?pa=9591556942@axl&pn=StockAlertPro&am=10&cu=INR" alt="UPI QR Code" class="w-32 h-32">
                     </div>
 
-                    <!-- NEW: UPI COPY BOX -->
+                    <!-- UPI COPY BOX -->
                     <div class="flex items-center justify-between bg-slate-800 border border-slate-600 rounded-lg p-2 mb-4 w-4/5 mx-auto">
                         <span class="text-[12px] text-slate-300 font-mono tracking-wide" id="upiIdText">9591556942@axl</span>
                         <button type="button" onclick="copyUPI()" class="text-[10px] bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-3 py-1.5 rounded transition">Copy</button>
@@ -58,8 +58,9 @@
                         <input type="text" id="user_name" required placeholder="e.g. Rahul" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 font-semibold text-white focus:outline-none focus:border-blue-500 text-sm">
                     </div>
                     <div>
-                        <label class="block text-[11px] font-semibold uppercase text-slate-400 mb-1">12-Digit UTR / Reference No.</label>
-                        <input type="text" id="utr_number" required minlength="12" maxlength="12" placeholder="e.g. 312345678901" class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 font-semibold text-white focus:outline-none focus:border-blue-500 text-sm">
+                        <!-- REMOVED minlength and maxlength RESTRICTIONS -->
+                        <label class="block text-[11px] font-semibold uppercase text-slate-400 mb-1">UTR / Transaction ID</label>
+                        <input type="text" id="utr_number" required placeholder="Paste your UTR or Transaction ID here..." class="w-full bg-slate-800 border border-slate-600 rounded-lg p-2 font-semibold text-white focus:outline-none focus:border-blue-500 text-sm">
                         <p class="text-[10px] text-slate-500 mt-1">Enter this after payment so we can verify your transfer.</p>
                     </div>
                 </div>

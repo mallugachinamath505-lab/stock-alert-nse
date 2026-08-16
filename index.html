@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NSE Stock Alert Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen p-4 md:p-8">
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <header class="mb-8 flex justify-between items-center">
+            <div>
+                <h1 class="text-3xl md:text-4xl font-extrabold text-blue-400">🇮🇳 NSE Alert Pro</h1>
+                <p class="text-slate-400 text-sm mt-1">Live Market Trigger System</p>
+            </div>
+        </header>
+
+        <!-- SETUP PROFILE SECTION (Hidden permanently after first use) -->
+        <div id="profileSection" class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl max-w-md mx-auto mb-8">
+            <h2 class="text-xl font-bold mb-2 text-slate-200">1-Minute Setup</h2>
+            <p class="text-xs text-slate-400 mb-6">Enter your details once to permanently link your Telegram account.</p>
+            
+            <form id="profileForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Your Name</label>
+                    <input type="text" id="name" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Mobile Number</label>
+                    <input type="tel" id="phone" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1">Telegram Chat ID</label>
+                    <input type="text" id="chat_id" required class="w-full bg-slate-900 border border-slate-700 rounded-lg p-2.5 text-white focus:outline-none focus:border-blue-500 font-semibold text-blue-300">
+                </div>
+                <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-500 font-bold py-3 rounded-lg transition shadow-lg text-white mt-4">
+                    Save Profile & Continue
+                </button>
+            </form>
+        </div>
+
+        <!-- MAIN DASHBOARD (Hidden until setup is complete) -->
+        <div id="dashboardSection" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+            
+            <!-- Quick Alert Form -->
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl h-fit">
+                <h2 class="text-xl font-bold mb-4 text-slate-200">⚡ Set Quick Alert</h2>
+                
+                <form id="alertForm" class="space-y-4">
+                    <div>
+                        <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">NSE Ticker</label>
+                        <input type="text" id="ticker" required placeholder="e.g. TCS, RELIANCE" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-lg font-bold uppercase text-white focus:outline-none focus:border-blue-500">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Target (₹)</label>
+                            <input type="number" step="0.05" id="target_price" required placeholder="0.00" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 text-lg font-bold text-white focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-1">Condition</label>
+                            <select id="condition" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-3 font-semibold text-white focus:outline-none focus:border-blue-500">
+                                <option value="ABOVE">Goes Above 📈</option>
+                                <option value="BELOW">Goes Below 📉</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="submitBtn" class="w-full bg-blue-600 hover:bg-blue-500 font-bold py-4 rounded-lg transition shadow-lg text-white mt-2 text-lg">
+                        Add Reminder
+                    </button>
+                </form>
+                <div id="message" class="mt-4 text-sm font-semibold text-center"></div>
+            </div>
+
+            <!-- Active Alerts Column -->
+            <div class="bg-slate-800 p-6 rounded-xl border border-slate-700 shadow-xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold text-slate-200">My Reminders</h2>
+                    <span class="text-xs bg-emerald-900/60 text-emerald-400 border border-emerald-700 px-2 py-1 rounded-full">● Live</span>
+                </div>
+                
+                <div id="alertsList" class="space-y-3 max-h-[480px] overflow-y-auto">
+                    <p class="text-slate-500 text-sm">Loading active alerts...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const profileSec = document.getElementById('profileSection');
+        const dashboardSec = document.getElementById('dashboardSection');
+        
+        // 1. Check if user already set up their profile permanently
+        document.addEventListener("DOMContentLoaded", () => {
+            if (localStorage.getItem("stock_chat_id")) {
+                showDashboard();
+            }
+        });
+
+        // 2. Handle First-Time Profile Setup
+        document.getElementById('profileForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            localStorage.setItem("stock_name", document.getElementById('name').value);
+            localStorage.setItem("stock_phone", document.getElementById('phone').value);
+            localStorage.setItem("stock_chat_id", document.getElementById('chat_id').value);
+            showDashboard();
+        });
+
+        // Function to switch to the main app view
+        function showDashboard() {
+            profileSec.classList.add('hidden');
+            dashboardSec.classList.remove('hidden');
+            loadAlerts(); // Load alerts when dashboard opens
+        }
+
+        // 3. Load only alerts that belong to this specific user's Chat ID
+        async function loadAlerts() {
+            try {
+                const res = await fetch('/api/alerts/active');
+                let alerts = await res.json();
+                
+                // Filter so friends don't see each other's alerts
+                const myChatId = localStorage.getItem("stock_chat_id");
+                alerts = alerts.filter(a => a.chat_id === myChatId);
+
+                const list = document.getElementById('alertsList');
+                
+                if (alerts.length === 0) {
+                    list.innerHTML = '<p class="text-slate-500 text-sm italic">No reminders set yet.</p>';
+                    return;
+                }
+
+                list.innerHTML = alerts.map(a => `
+                    <div class="p-4 bg-slate-900/80 border border-slate-700 rounded-lg flex justify-between items-center">
+                        <div>
+                            <div class="font-black text-blue-400 text-xl">${a.ticker}</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-slate-400">Alert me when</div>
+                            <div class="font-bold text-white text-lg">${a.condition} ₹${a.target}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error("Failed to load alerts", err);
+            }
+        }
+
+        // 4. Handle adding a new stock reminder
+        document.getElementById('alertForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const msg = document.getElementById('message');
+            
+            btn.disabled = true;
+            btn.textContent = 'Adding...';
+            msg.textContent = '';
+
+            // Grab hidden user details from the browser memory
+            const payload = {
+                name: localStorage.getItem("stock_name"),
+                phone: localStorage.getItem("stock_phone"),
+                chat_id: localStorage.getItem("stock_chat_id"),
+                ticker: document.getElementById('ticker').value,
+                target_price: parseFloat(document.getElementById('target_price').value),
+                condition: document.getElementById('condition').value
+            };
+
+            try {
+                const response = await fetch('/api/alerts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+
+                if (response.ok) {
+                    msg.className = 'mt-4 text-sm font-bold text-emerald-400';
+                    msg.textContent = `✅ Reminder set! (Current: ₹${result.current_price})`;
+                    
+                    // Clear the stock inputs for the next entry
+                    document.getElementById('ticker').value = '';
+                    document.getElementById('target_price').value = '';
+                    
+                    loadAlerts();
+                } else {
+                    msg.className = 'mt-4 text-sm font-bold text-rose-400';
+                    msg.textContent = result.detail || 'Error saving alert';
+                }
+            } catch (err) {
+                msg.className = 'mt-4 text-sm font-bold text-rose-400';
+                msg.textContent = 'Failed to connect to backend.';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Add Reminder';
+                
+                // Clear success message after 4 seconds
+                setTimeout(() => msg.textContent = '', 4000);
+            }
+        });
+
+        // Automatically check for new alerts every 15 seconds
+        setInterval(loadAlerts, 15000);
+    </script>
+</body>
+</html>

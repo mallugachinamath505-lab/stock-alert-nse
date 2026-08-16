@@ -14,8 +14,9 @@ import requests
 # ==========================================
 # CONFIGURATION
 # ==========================================
-TELEGRAM_BOT_TOKEN = "8899102290:AAHa7KkJLpcJUfn15ux2T5iKa1RNJH880MK"
+TELEGRAM_BOT_TOKEN = "8899102290:AAHtrEfLVk0eMgerHKJ44lnarvApBwQhDJQ"
 MONGO_URI = "mongodb+srv://mallugachinamath505_db_user:aoKBQpO5XRXily4W@stockalert.wmexi7s.mongodb.net/?appName=stockalert"
+
 client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
 db = client["stock_alerts_db"]
 alerts_col = db["alerts"]
@@ -80,8 +81,8 @@ async def check_prices_loop():
                         send_telegram_alert(chat_id, ticker, current_price, target_price, condition)
                         alerts_col.update_one({"_id": alert_id}, {"$set": {"is_active": False}})
                     
-                    # Pause for 2 seconds before checking the next stock to prevent bans
-                    await asyncio.sleep(2)
+                    # Pause for 15 seconds before checking the next stock to prevent bans
+                    await asyncio.sleep(15)
 
                 except Exception as e:
                     print(f"[Error] Failed checking {ticker}: {e}")
@@ -89,8 +90,8 @@ async def check_prices_loop():
         except Exception as db_err:
             print(f"[Database Error]: {db_err}")
 
-        # Poll every 60 seconds
-        await asyncio.sleep(60)
+        # Poll every 5 minutes (300 seconds)
+        await asyncio.sleep(300)
 
 # ==========================================
 # FASTAPI APPLICATION & ROUTES

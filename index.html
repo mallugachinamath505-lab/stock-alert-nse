@@ -106,8 +106,10 @@
         const profileSec = document.getElementById('profileSection');
         const dashboardSec = document.getElementById('dashboardSection');
         
-        // IMPORTANT: PASTE YOUR RAZORPAY KEY ID HERE SO THE POPUP WORKS
-        const RAZORPAY_KEY_ID = "YOUR_RAZORPAY_KEY_ID";
+        // ---------------------------------------------------------
+        // ✅ YOUR REAL TEST KEY IS NOW HARDCODED HERE
+        // ---------------------------------------------------------
+        const RAZORPAY_KEY_ID = "rzp_test_TQTwme0xhHIyFO";
         
         document.addEventListener("DOMContentLoaded", () => {
             if (localStorage.getItem("stock_chat_id")) {
@@ -186,7 +188,7 @@
                 rzp1.open();
 
                 rzp1.on('payment.failed', function (response){
-                    alert("Payment Failed: " + response.error.description);
+                    alert("Payment Failed: \n" + response.error.description);
                 });
 
             } catch(err) {
